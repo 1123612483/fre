@@ -1,5 +1,5 @@
 import { getCurrentFiber, jsx, useEffect, useState,options } from 'fre'
-import { Component, Props, Loader,Fiber } from '../src/type'
+import { Component, Props, Loader,Fiber } from '../../src/type'
 
 options.catchError = (error:any,fiber:Fiber){
   if (!!error && typeof error.then === 'function') {
@@ -31,11 +31,7 @@ export function Suspense(props) {
   const current = getCurrentFiber()
   const [suspend, setSuspend] = useState(false)
   useEffect(
-    () =>
-      current.suspenders.forEach(s =>
-        s.then(c => setSuspend(true))
-      ),
-    []
+    () => Promise.all(current.suspenders).then(c => setSuspend(true)),[]
   )
   return [props.children, !suspend && props.fallback]
 }

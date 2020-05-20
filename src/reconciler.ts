@@ -4,9 +4,9 @@ import { resetCursor } from './hooks'
 import { scheduleCallback, shouldYeild, planWork } from './scheduler'
 import { isArr } from './jsx'
 
-let preCommit: Fiber | undefined | null
-let currentFiber: Fiber | undefined
-let WIP: Fiber | undefined | null
+let preCommit: Fiber | null
+let currentFiber: Fiber | null
+let WIP: Fiber | null
 let updateQueue: Array<Fiber> = []
 let commitQueue: Array<Fiber> = []
 
@@ -67,14 +67,7 @@ function reconcile(WIP: Fiber) {
 }
 
 function updateHook(WIP: Fiber) {
-  if (
-    WIP.type?.tag === Flag.MEMO &&
-    WIP.dirty == 0 &&
-    !shouldUpdate(WIP.oldProps, WIP.props)
-  ) {
-    cloneChildren(WIP)
-    return
-  }
+  options.updateHook && options.updateHook(WIP)
   currentFiber = WIP
   resetCursor()
   let children = WIP.type(WIP.props)
@@ -152,22 +145,6 @@ function reconcileChildren(WIP: Fiber, children: Vnode['children']) {
   }
 
   if (prevFiber) prevFiber.sibling = null
-}
-
-function cloneChildren(WIP: Fiber) {
-  if (!WIP.child) return
-  let child = WIP.child
-  let newChild = child
-  newChild.op = Flag.NOWORK
-  WIP.child = newChild
-  newChild.parent = WIP
-  newChild.sibling = null
-}
-
-function shouldUpdate<T extends Object>(a: T, b: T) {
-  for (let i in a) if (!(i in b)) return true
-  for (let i in b) if (a[i] !== b[i]) return true
-  return false
 }
 
 function shouldPlace(fiber: Fiber) {

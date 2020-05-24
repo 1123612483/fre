@@ -163,22 +163,16 @@ function commitWork(fiber: Fiber) {
 
 function commit(fiber: Fiber) {
   const { op, pnode, node, ref, hooks } = fiber
-  if (op === Flag.NOWORK) {
-  } else if (op === Flag.DELETE) {
+  if (op === Flag.NOWORK) return
+  if (op === Flag.DELETE) {
     hooks && hooks.list.forEach(cleanup)
     cleanupRef(fiber.kids)
     while (isFn(fiber.type)) fiber = fiber.child
     pnode.removeChild(fiber.node)
   } else if (isFn(fiber.type)) {
     if (hooks) {
-      hooks.layout.forEach(cleanup)
-      hooks.layout.forEach(effect)
-      hooks.layout = []
-      planWork(() => {
-        hooks.effect.forEach(cleanup)
-        hooks.effect.forEach(effect)
-        hooks.effect = []
-      })
+      side(hooks.layout)
+      planWork(() => side(hooks.effect))
     }
   } else if (op === Flag.UPDATE) {
     updateElement(node as Dom, fiber.lastProps, fiber.props)
@@ -225,14 +219,20 @@ function cleanupRef(kids: Record<string, Fiber>) {
   }
 }
 
-const cleanup = (e: Function) => e[2] && e[2]()
+function side(effects: Function[]) {
+  effects.forEach(cleanup)
+  effects.forEach(effect)
+  effects.length = 0
+}
+
+export const getCurrentFiber = () => currentFiber || null
 
 const effect = (e: Function) => {
   const res = e[0]()
   if (isFn(res)) e[2] = res
 }
 
-export const getCurrentFiber = () => currentFiber || null
+const cleanup = (e: Function) => e[2] && e[2]()
 
 export const isFn = (x: any): x is Function => typeof x === 'function'
 export const isStr = (s: any): s is number | string =>
